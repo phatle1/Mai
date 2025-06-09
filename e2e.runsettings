@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <!-- NUnit adapter -->  
+  <NUnit>
+    <NumberOfTestWorkers>5</NumberOfTestWorkers>
+  </NUnit>
+  <!-- General run configuration -->
+  <RunConfiguration>
+    <MaxCpuCount>4</MaxCpuCount>
+    <TargetFrameworkVersion>net5.0</TargetFrameworkVersion>
+    <ResultsDirectory>.\TestResults</ResultsDirectory>
+    <TestAdaptersPaths>.\</TestAdaptersPaths>
+    <EnvironmentVariables>
+      <DEBUG>pw:api</DEBUG>
+   	</EnvironmentVariables>
+  </RunConfiguration>
+  <!-- Playwright -->  
+  <Playwright>
+    <BrowserName>chromium</BrowserName>
+    <Timeouts>
+      <DefaultTimeout>120000</DefaultTimeout> <!-- Default timeout for actions in milliseconds -->
+      <NavigationTimeout>120000</NavigationTimeout> <!-- Timeout for navigation actions -->
+    </Timeouts>
+    <ExpectTimeout>120000</ExpectTimeout>
+    <LaunchOptions>
+      <Headless>true</Headless>
+      <Channel>chrome</Channel>
+      <SlowMo>1000</SlowMo>
+    </LaunchOptions>
+  </Playwright>
+</RunSettings>
