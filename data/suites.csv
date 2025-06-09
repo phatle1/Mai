@@ -1,0 +1,2 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"","11712","LoginProductionSuccess","","Mon Jun 09 12:57:47 UTC 2025","passed","Mon Jun 09 12:57:58 UTC 2025","","WeTransact.Publisher.AutomationTest.Production.LoginProductionTests","WeTransact.Publisher.AutomationTest.Production.LoginProductionTests",""
