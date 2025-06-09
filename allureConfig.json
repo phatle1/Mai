@@ -1,0 +1,10 @@
+{
+    "allure": {
+      "directory": "../../../allure-results",
+      "brokenTestData": ["System.Exception"],
+      "links": [
+            "https://issue-tracker.example.com/{issue}",
+            "https://tms.example.com/{tms}"
+        ]
+    }
+  }
