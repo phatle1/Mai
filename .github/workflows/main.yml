@@ -30,8 +30,15 @@ jobs:
     - name: Run tests
       run: |
         mkdir allure-results
-        dotnet test --settings e2e.runsettings  --logger "trx;LogFileName=allure-report.trx" --results-directory "allure-results"
+        dotnet test
       continue-on-error: true
+
+    - name: Upload Allure Results Artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: allure-results
+        path: allure-results
 
     - name: Generate Allure Report
       if: always()
