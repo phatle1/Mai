@@ -1,18 +1,8 @@
 using Allure.NUnit.Attributes;
 using Allure.NUnit;
 using Microsoft.Playwright;
-using Allure.Commons;
-using System.Text.Json;
 using System.Text.Json.Serialization;
-using NUnit.Framework;
-using System.IO;
-using System.Collections.Generic;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using NUnit.Framework.Interfaces;
 using Allure.Net.Commons;
-using AllureLifecycle = Allure.Net.Commons.AllureLifecycle;
  
 namespace WeTransact.Publisher.AutomationTest.Production
 {
@@ -47,7 +37,7 @@ namespace WeTransact.Publisher.AutomationTest.Production
             var page = await context.NewPageAsync();            
             await page.GotoAsync("https://www.google.com/");
             var screenshotPath = "screenshot.png";
-            await Page.ScreenshotAsync(new PageScreenshotOptions { Path = screenshotPath });
+            await page.ScreenshotAsync(new PageScreenshotOptions { Path = screenshotPath });
             AllureApi.AddAttachment("Screenshot on Failure", "image/png", screenshotPath);
             Assert.Pass("Login successful");
  
