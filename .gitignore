@@ -1,0 +1,22 @@
+# Build results
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Allure results and reports
+allure-results/
+allure-report/
+
+# Playwright downloads/cache
+.playwright/
+
+# VS Code settings
+.vscode/
+
+# Test logs
+TestResults/
