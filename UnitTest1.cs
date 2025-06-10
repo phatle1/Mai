@@ -36,7 +36,7 @@ namespace WeTransact.Publisher.AutomationTest.Production
 
             var page = await context.NewPageAsync();            
             await page.GotoAsync("https://www.google.com/");
-            var screenshotPath = "screenshot.png";
+            var screenshotPath = Path.Combine("allure-results", $"screenshot_{Guid.NewGuid()}.png");
             await page.ScreenshotAsync(new PageScreenshotOptions { Path = screenshotPath });
             AllureApi.AddAttachment("Screenshot on Failure", "image/png", screenshotPath);
             Assert.Pass("Login successful");
