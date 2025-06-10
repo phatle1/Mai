@@ -35,14 +35,17 @@ jobs:
       run: pwsh bin/Debug/net8.0/playwright.ps1 install --with-deps
 
     - name: Create allure-results directory
-      run: mkdir -p allure-results
+      run: |
+        if (-not (Test-Path "allure-results")) {
+          New-Item -ItemType Directory -Path "allure-results" -Force
+        }
     
     - name: Run tests
       run: |
-        echo "Current directory:"
-        pwd
-        echo "Directory contents before test:"
-        ls -R
+        Write-Host "Current directory:"
+        Get-Location
+        Write-Host "Directory contents before test:"
+        Get-ChildItem -Recurse | Select-Object FullName
         dotnet test --settings e2e.runsettings --logger "trx;LogFileName=allure-report.trx" --results-directory "TestResults" -- NUnit.TestOutputXml=allure-results
       continue-on-error: true
       env:
@@ -51,8 +54,8 @@ jobs:
     - name: List all files in repo after tests (debug)
       if: always()
       run: |
-        echo "Directory contents after test:"
-        ls -R
+        Write-Host "Directory contents after test:"
+        Get-ChildItem -Recurse | Select-Object FullName
 
     - name: List screenshots in allure-results (debug)
       if: always()
@@ -92,6 +95,9 @@ jobs:
             New-Item -ItemType Directory -Path "allure-results\history" -Force
           }
           Copy-Item -Path "gh-pages-history\history\*" -Destination "allure-results\history" -Recurse -Force
+          Write-Host "History copied successfully"
+        } else {
+          Write-Host "No previous history found"
         }
 
     - name: Generate Allure Report
@@ -116,15 +122,53 @@ jobs:
           Write-Host "Allure report directory not found!"
         }
 
-    - name: Deploy to GitHub Pages
+    - name: Deploy to GitHub Pages (Windows)
       if: always()
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./allure-report
-        publish_branch: gh-pages
-        keep_files: false
-        force_orphan: true
-        user_name: 'github-actions[bot]'
-        user_email: 'github-actions[bot]@users.noreply.github.com'
-        commit_message: 'Deploy Allure report ${{ github.sha }}'
+      run: |
+        # Configure git
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git config --global user.name "github-actions[bot]"
+        
+        # Clone or create gh-pages branch
+        $repoUrl = "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+        
+        if (git ls-remote --heads $repoUrl gh-pages) {
+          Write-Host "Cloning existing gh-pages branch..."
+          git clone --branch gh-pages --single-branch $repoUrl gh-pages-deploy
+        } else {
+          Write-Host "Creating new gh-pages branch..."
+          git clone $repoUrl gh-pages-deploy
+          Set-Location gh-pages-deploy
+          git checkout --orphan gh-pages
+          git rm -rf .
+          Set-Location ..
+        }
+        
+        # Clean and copy new content
+        if (Test-Path "gh-pages-deploy") {
+          # Remove all files except .git and history
+          Get-ChildItem -Path "gh-pages-deploy" -Exclude ".git" | Remove-Item -Recurse -Force
+          
+          # Copy new report
+          if (Test-Path "allure-report") {
+            Copy-Item -Path "allure-report\*" -Destination "gh-pages-deploy" -Recurse -Force
+            Write-Host "Report copied to gh-pages-deploy"
+          }
+          
+          # Commit and push
+          Set-Location gh-pages-deploy
+          git add .
+          $commitMessage = "Update Allure report - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+          
+          if (git diff --staged --quiet) {
+            Write-Host "No changes to commit"
+          } else {
+            git commit -m $commitMessage
+            git push origin gh-pages --force
+            Write-Host "Report deployed successfully"
+          }
+        } else {
+          Write-Host "Failed to create gh-pages-deploy directory"
+        }
+      env:
+        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
