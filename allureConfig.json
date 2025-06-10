@@ -1,6 +1,6 @@
 {
     "allure": {
-      "directory": "../../allure-results",
+      "directory": "../../../allure-results",
       "brokenTestData": ["System.Exception"],
       "links": [
             "https://issue-tracker.example.com/{issue}",
