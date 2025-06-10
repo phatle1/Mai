@@ -1,2 +1,2 @@
 "DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
-"","6343","ExampleTest","","Tue Jun 10 05:09:38 UTC 2025","failed","Tue Jun 10 05:09:44 UTC 2025","","WeTransact.Publisher.AutomationTest.Production.ExampleTests","WeTransact.Publisher.AutomationTest.Production.ExampleTests",""
+"","6912","ExampleTest","","Tue Jun 10 05:22:04 UTC 2025","failed","Tue Jun 10 05:22:11 UTC 2025","","WeTransact.Publisher.AutomationTest.Production.ExampleTests","WeTransact.Publisher.AutomationTest.Production.ExampleTests",""
