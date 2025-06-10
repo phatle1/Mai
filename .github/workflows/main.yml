@@ -9,17 +9,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: zulu
-          java-version: 17
+      - name: Install Allure CLI
+        run: npm install -g allure-commandline
 
       - name: Run tests
         run: |
           dotnet build --configuration Debug
           pwsh bin/Debug/net8.0/playwright.ps1 install --with-deps
           dotnet test --settings e2e.runsettings --logger "trx;LogFileName=allure-report.trx" --results-directory "allure-results"
+
+      - name: List allure-results directory (debug)
+        if: always()
+        run: |
+          Get-ChildItem -Path allure-results -Recurse | ForEach-Object { Write-Host $_.FullName }
 
       - name: Load test report history
         uses: actions/checkout@v4
@@ -29,13 +31,17 @@ jobs:
           ref: gh-pages
           path: gh-pages
 
+      - name: Copy Allure history for trend
+        if: always()
+        run: |
+          if (Test-Path 'gh-pages\history') {
+            New-Item -ItemType Directory -Path 'allure-results\history' -Force | Out-Null
+            Copy-Item -Path 'gh-pages\history\*' -Destination 'allure-results\history' -Recurse -Force
+          }
+
       - name: Build test report
         if: always()
         run: |
-          npm install -g allure-commandline
-          if (Test-Path 'gh-pages\history') {
-            Copy-Item -Path 'gh-pages\history\*' -Destination 'allure-results\history' -Recurse -Force
-          }
           allure generate allure-results --clean -o allure-history
 
       - name: Publish test report
