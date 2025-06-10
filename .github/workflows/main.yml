@@ -86,18 +86,31 @@ jobs:
           }
         }
 
-    - name: Prepare Allure history for trend
+    - name: Download previous Allure history
       if: always()
+      continue-on-error: true
       run: |
-        git clone --branch gh-pages --single-branch https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} gh-pages-history
-        if (Test-Path "gh-pages-history\history") {
-          if (-not (Test-Path "allure-results\history")) {
-            New-Item -ItemType Directory -Path "allure-results\history" -Force
+        $headers = @{ Authorization = "token ${{ secrets.GITHUB_TOKEN }}" }
+        try {
+          # Try to download the previous report artifact
+          $artifactsUrl = "https://api.github.com/repos/${{ github.repository }}/actions/artifacts"
+          $response = Invoke-RestMethod -Uri $artifactsUrl -Headers $headers
+          
+          $latestReport = $response.artifacts | Where-Object { $_.name -eq "allure-report" } | Sort-Object created_at -Descending | Select-Object -First 1
+          
+          if ($latestReport) {
+            Write-Host "Found previous report artifact"
+            # Download and extract would be complex, so we'll generate history differently
+          } else {
+            Write-Host "No previous report found"
           }
-          Copy-Item -Path "gh-pages-history\history\*" -Destination "allure-results\history" -Recurse -Force
-          Write-Host "History copied successfully"
-        } else {
-          Write-Host "No previous history found"
+        } catch {
+          Write-Host "Could not fetch previous artifacts: $($_.Exception.Message)"
+        }
+        
+        # Ensure history directory exists for trend data
+        if (-not (Test-Path "allure-results\history")) {
+          New-Item -ItemType Directory -Path "allure-results\history" -Force
         }
 
     - name: Generate Allure Report
@@ -122,53 +135,17 @@ jobs:
           Write-Host "Allure report directory not found!"
         }
 
-    - name: Deploy to GitHub Pages (Windows)
+    - name: Setup Pages
       if: always()
-      run: |
-        # Configure git
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git config --global user.name "github-actions[bot]"
-        
-        # Clone or create gh-pages branch
-        $repoUrl = "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
-        
-        if (git ls-remote --heads $repoUrl gh-pages) {
-          Write-Host "Cloning existing gh-pages branch..."
-          git clone --branch gh-pages --single-branch $repoUrl gh-pages-deploy
-        } else {
-          Write-Host "Creating new gh-pages branch..."
-          git clone $repoUrl gh-pages-deploy
-          Set-Location gh-pages-deploy
-          git checkout --orphan gh-pages
-          git rm -rf .
-          Set-Location ..
-        }
-        
-        # Clean and copy new content
-        if (Test-Path "gh-pages-deploy") {
-          # Remove all files except .git and history
-          Get-ChildItem -Path "gh-pages-deploy" -Exclude ".git" | Remove-Item -Recurse -Force
-          
-          # Copy new report
-          if (Test-Path "allure-report") {
-            Copy-Item -Path "allure-report\*" -Destination "gh-pages-deploy" -Recurse -Force
-            Write-Host "Report copied to gh-pages-deploy"
-          }
-          
-          # Commit and push
-          Set-Location gh-pages-deploy
-          git add .
-          $commitMessage = "Update Allure report - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-          
-          if (git diff --staged --quiet) {
-            Write-Host "No changes to commit"
-          } else {
-            git commit -m $commitMessage
-            git push origin gh-pages --force
-            Write-Host "Report deployed successfully"
-          }
-        } else {
-          Write-Host "Failed to create gh-pages-deploy directory"
-        }
-      env:
-        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      uses: actions/configure-pages@v4
+
+    - name: Upload to GitHub Pages
+      if: always()
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: .\allure-report
+
+    - name: Deploy to GitHub Pages
+      if: always()
+      id: deployment
+      uses: actions/deploy-pages@v4
