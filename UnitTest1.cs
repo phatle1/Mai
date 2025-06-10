@@ -95,6 +95,7 @@ namespace WeTransact.Publisher.AutomationTest.Production
 
             Console.WriteLine("Saving screenshot to: " + screenshotPath);
             Console.WriteLine("Working directory: " + Directory.GetCurrentDirectory());
+            Console.WriteLine($"Screenshot exists after save: {File.Exists(screenshotPath)}");
             
             
 
@@ -160,10 +161,9 @@ namespace WeTransact.Publisher.AutomationTest.Production
 
             // Your test logic here
             var title = await _page.TitleAsync();
-            Assert.That(title, Does.Contain("Example"));
+            Assert.Fail(title, Does.Contain("Example"));
 
-            // Take another screenshot if needed
-            await TakeScreenshot("test_completed");
+           
         }
     }
     
