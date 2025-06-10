@@ -30,12 +30,13 @@ jobs:
           path: gh-pages
 
       - name: Build test report
-        uses: simple-elf/allure-report-action@v1.10
         if: always()
-        with:
-          gh_pages: gh-pages
-          allure_history: allure-history
-          allure_results: build/allure-results
+        run: |
+          npm install -g allure-commandline
+          if exist gh-pages\history (
+            xcopy gh-pages\history allure-results\history /E /I /Y
+          )
+          allure generate allure-results --clean -o allure-history
 
       - name: Publish test report
         uses: peaceiris/actions-gh-pages@v4
