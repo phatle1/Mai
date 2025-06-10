@@ -29,9 +29,18 @@ jobs:
     
     - name: Run tests
       run: |
-        mkdir allure-results
+        echo "Current directory:"
+        pwd
+        echo "Directory contents before test:"
+        ls -R
         dotnet test --settings e2e.runsettings  --logger "trx;LogFileName=allure-report.trx" --results-directory "allure-results"
       continue-on-error: true
+
+    - name: List all files in repo after tests (debug)
+      if: always()
+      run: |
+        echo "Directory contents after test:"
+        ls -R
 
     - name: List screenshots in allure-results (debug)
       if: always()
