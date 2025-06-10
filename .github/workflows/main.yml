@@ -36,7 +36,8 @@ jobs:
     - name: List screenshots in allure-results (debug)
       if: always()
       run: |
-        dir allure-results\*.png /s || echo "No screenshots found"
+        Get-ChildItem -Path allure-results -Filter *.png -Recurse | ForEach-Object { Write-Host $_.FullName }
+        if (-not (Get-ChildItem -Path allure-results -Filter *.png -Recurse)) { Write-Host "No screenshots found" }
 
     - name: Prepare Allure history for trend
       if: always()
