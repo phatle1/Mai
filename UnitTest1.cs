@@ -103,11 +103,15 @@ namespace WeTransact.Publisher.AutomationTest.Production
 
 
             // Take screenshot
-            await _page.ScreenshotAsync(new PageScreenshotOptions
+            try
             {
-                Path = screenshotPath,
-                FullPage = true
-            });
+                await _page.ScreenshotAsync(new PageScreenshotOptions { Path = screenshotPath });
+                Console.WriteLine($"Screenshot exists after save: {File.Exists(screenshotPath)}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Screenshot FAILED: " + ex.ToString());
+            }
 
             // Attach to Allure report
             AllureApi.AddAttachment(fileName, "image/png", screenshotPath);
@@ -127,7 +131,6 @@ namespace WeTransact.Publisher.AutomationTest.Production
             }
         }
 
-        // Helper method to attach text to Allure report
         protected void AttachTextToAllure(string name, string content)
         {
             AllureApi.AddAttachment(name, "text/plain", content);
@@ -161,7 +164,7 @@ namespace WeTransact.Publisher.AutomationTest.Production
 
             // Your test logic here
             var title = await _page.TitleAsync();
-            Assert.Fail(title, Does.Contain("Example"));
+            Assert.Fail("failed");
 
            
         }
