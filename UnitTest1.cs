@@ -11,7 +11,7 @@ namespace WeTransact.Publisher.AutomationTest.Production
         [JsonPropertyName("url")]
         public string? Url { get; set; }
     }
- 
+
     [TestFixture]
     [Parallelizable(ParallelScope.All)]
     [AllureNUnit]
@@ -23,8 +23,6 @@ namespace WeTransact.Publisher.AutomationTest.Production
         [AllureOwner("QA Team")]
         public async Task LoginProductionSuccess()
         {
-           
-
             using var playwright = await Playwright.CreateAsync();
             var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = false });
 
@@ -34,16 +32,21 @@ namespace WeTransact.Publisher.AutomationTest.Production
                 ScreenSize = null
             });
 
-            var page = await context.NewPageAsync();            
-            await page.GotoAsync("https://www.google.com/");
-            var screenshotPath = Path.Combine("allure-results", $"screenshot_{Guid.NewGuid()}.png");
-            await page.ScreenshotAsync(new PageScreenshotOptions { Path = screenshotPath });
-            AllureApi.AddAttachment("Screenshot on Failure", "image/png", screenshotPath);
-            Assert.Pass("Login successful");
- 
-          
+            var page = await context.NewPageAsync();
+            try
+            {
+                await page.GotoAsync("https://www.google.com/");
+                Assert.Fail("Login successful");
             }
-          
+            catch (Exception ex)
+            {
+                Directory.CreateDirectory("allure-results");
+                var screenshotPath = Path.Combine("allure-results", $"screenshot_{Guid.NewGuid()}.png");
+                await page.ScreenshotAsync(new PageScreenshotOptions { Path = screenshotPath });
+                AllureApi.AddAttachment("Screenshot on Failure", "image/png", screenshotPath);
+                throw;
+            }
         }
+    }
     
 }
