@@ -1,151 +1,46 @@
-name: Playwright Tests
-on:
-  push:
-    branches: [ "Master" ]
-  pull_request:
-    branches: [ "Master" ]
-  workflow_dispatch:  # Allows manual trigger
+name: Run tests and publish the report
+on: [push]
+
+permissions: write-all
+
 jobs:
   test:
     runs-on: windows-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0 
-        
-    - name: Setup dotnet
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
+      - uses: actions/checkout@v4
 
-    - name: Build & Install
-      run: dotnet build --configuration Debug
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 17
 
-    - name: Install Allure CLI
-      run: npm install -g allure-commandline --save-dev
-      
-    - name: Install browsers
-      run: pwsh bin/Debug/net8.0/playwright.ps1 install --with-deps
+      - name: Run tests
+        run: |
+          dotnet build --configuration Debug
+          pwsh bin/Debug/net8.0/playwright.ps1 install --with-deps
+          dotnet test --settings e2e.runsettings --logger "trx;LogFileName=allure-report.trx" --results-directory "allure-results"
 
-    - name: Create allure-results directory
-      run: |
-        if (-not (Test-Path "allure-results")) {
-          New-Item -ItemType Directory -Path "allure-results" -Force
-        }
-    
-    - name: Run tests
-      run: |
-        Write-Host "Current directory:"
-        Get-Location
-        Write-Host "Directory contents before test:"
-        Get-ChildItem -Recurse | Select-Object FullName
-        dotnet test --settings e2e.runsettings --logger "trx;LogFileName=allure-report.trx" --results-directory "TestResults" -- NUnit.TestOutputXml=allure-results
-      continue-on-error: true
-      env:
-        ALLURE_RESULTS_DIR: allure-results
+      - name: Load test report history
+        uses: actions/checkout@v4
+        if: always()
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: gh-pages
 
-    - name: List all files in repo after tests (debug)
-      if: always()
-      run: |
-        Write-Host "Directory contents after test:"
-        Get-ChildItem -Recurse | Select-Object FullName
+      - name: Build test report
+        uses: simple-elf/allure-report-action@v1.10
+        if: always()
+        with:
+          gh_pages: gh-pages
+          allure_history: allure-history
+          allure_results: build/allure-results
 
-    - name: List screenshots in allure-results (debug)
-      if: always()
-      run: |
-        Get-ChildItem -Path . -Filter *.png -Recurse | ForEach-Object { Write-Host $_.FullName }
-        Get-ChildItem -Path . -Filter *.jpg -Recurse | ForEach-Object { Write-Host $_.FullName }
-        if (Test-Path "allure-results") {
-          Get-ChildItem -Path allure-results -Recurse | ForEach-Object { Write-Host $_.FullName }
-        }
-        if (Test-Path "TestResults") {
-          Get-ChildItem -Path TestResults -Recurse | ForEach-Object { Write-Host $_.FullName }
-        }
-
-    - name: Copy screenshots to allure-results
-      if: always()
-      run: |
-        if (Test-Path "TestResults") {
-          Get-ChildItem -Path TestResults -Filter *.png -Recurse | ForEach-Object {
-            Copy-Item $_.FullName -Destination allure-results -Force
-            Write-Host "Copied screenshot: $($_.Name)"
-          }
-        }
-        # Also check for screenshots in bin directory
-        if (Test-Path "bin") {
-          Get-ChildItem -Path bin -Filter *.png -Recurse | ForEach-Object {
-            Copy-Item $_.FullName -Destination allure-results -Force
-            Write-Host "Copied screenshot from bin: $($_.Name)"
-          }
-        }
-
-    - name: Download previous Allure history
-      if: always()
-      continue-on-error: true
-      run: |
-        $headers = @{ Authorization = "token ${{ secrets.GITHUB_TOKEN }}" }
-        try {
-          # Try to download the previous report artifact
-          $artifactsUrl = "https://api.github.com/repos/${{ github.repository }}/actions/artifacts"
-          $response = Invoke-RestMethod -Uri $artifactsUrl -Headers $headers
-          
-          $latestReport = $response.artifacts | Where-Object { $_.name -eq "allure-report" } | Sort-Object created_at -Descending | Select-Object -First 1
-          
-          if ($latestReport) {
-            Write-Host "Found previous report artifact"
-            # Download and extract would be complex, so we'll generate history differently
-          } else {
-            Write-Host "No previous report found"
-          }
-        } catch {
-          Write-Host "Could not fetch previous artifacts: $($_.Exception.Message)"
-        }
-        
-        # Ensure history directory exists for trend data
-        if (-not (Test-Path "allure-results\history")) {
-          New-Item -ItemType Directory -Path "allure-results\history" -Force
-        }
-
-    - name: Generate Allure Report
-      if: always()
-      run: |
-        allure generate allure-results --clean -o allure-report
-
-    - name: Upload Allure Report Artifact
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: allure-report
-        path: allure-report
-
-    - name: Debug - Check allure-report contents
-      if: always()
-      run: |
-        if (Test-Path "allure-report") {
-          Write-Host "Allure report directory contents:"
-          Get-ChildItem -Path "allure-report" -Recurse | ForEach-Object { Write-Host $_.FullName }
-        } else {
-          Write-Host "Allure report directory not found!"
-        }
-
-    - name: Setup Pages
-      if: always()
-      uses: actions/configure-pages@v4
-
-    - name: Upload to GitHub Pages
-      if: always()
-      uses: actions/upload-pages-artifact@v3
-      with:
-        path: .\allure-report
-
-    - name: Deploy to GitHub Pages
-      if: always()
-      id: deployment
-      uses: actions/deploy-pages@v4
+      - name: Publish test report
+        uses: peaceiris/actions-gh-pages@v4
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-history
