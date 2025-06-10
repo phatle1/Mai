@@ -79,13 +79,17 @@ namespace WeTransact.Publisher.AutomationTest.Production
 
         protected async Task TakeScreenshot(string name = "screenshot")
         {
+            
             if (_page == null) return;
 
             var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
             var testName = TestContext.CurrentContext.Test.Name;
             var fileName = $"{testName}_{name}_{timestamp}.png";
             // Always resolve allure-results relative to the git repo root
-            var resultsDir = Path.Combine(Directory.GetCurrentDirectory(), "allure-results");
+
+
+            var repoRoot = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "..", ".."));
+            var resultsDir = Path.Combine(repoRoot, "allure-results");
             Directory.CreateDirectory(resultsDir);
             var screenshotPath = Path.Combine(resultsDir, fileName);
 
