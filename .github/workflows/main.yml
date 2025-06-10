@@ -4,9 +4,17 @@ on:
     branches: [ "Master" ]
   pull_request:
     branches: [ "Master" ]
+  workflow_dispatch:  # Allows manual trigger
 jobs:
   test:
     runs-on: windows-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
     - uses: actions/checkout@v4
       with:
@@ -98,16 +106,25 @@ jobs:
         name: allure-report
         path: allure-report
 
-    - name: Deploy report to Github Pages
+    - name: Debug - Check allure-report contents
       if: always()
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git config --global user.name "github-actions[bot]"
-        git clone --branch gh-pages --single-branch https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} gh-pages
-        Copy-Item -Path "allure-report\*" -Destination "gh-pages" -Recurse -Force
-        cd gh-pages
-        git add .
-        git commit -m "Update Allure report [skip ci]" -or $true
-        git push
+        if (Test-Path "allure-report") {
+          Write-Host "Allure report directory contents:"
+          Get-ChildItem -Path "allure-report" -Recurse | ForEach-Object { Write-Host $_.FullName }
+        } else {
+          Write-Host "Allure report directory not found!"
+        }
+
+    - name: Deploy to GitHub Pages
+      if: always()
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./allure-report
+        publish_branch: gh-pages
+        keep_files: false
+        force_orphan: true
+        user_name: 'github-actions[bot]'
+        user_email: 'github-actions[bot]@users.noreply.github.com'
+        commit_message: 'Deploy Allure report ${{ github.sha }}'
