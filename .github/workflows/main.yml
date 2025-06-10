@@ -23,9 +23,11 @@ jobs:
     - name: Install Allure CLI
       run: npm install -g allure-commandline --save-dev
       
-    - name: install browsers
+    - name: Install browsers
       run: pwsh bin/Debug/net8.0/playwright.ps1 install --with-deps
 
+    - name: Create allure-results directory
+      run: mkdir -p allure-results
     
     - name: Run tests
       run: |
@@ -33,8 +35,10 @@ jobs:
         pwd
         echo "Directory contents before test:"
         ls -R
-        dotnet test --settings e2e.runsettings  --logger "trx;LogFileName=allure-report.trx" --results-directory "allure-results"
+        dotnet test --settings e2e.runsettings --logger "trx;LogFileName=allure-report.trx" --results-directory "TestResults" -- NUnit.TestOutputXml=allure-results
       continue-on-error: true
+      env:
+        ALLURE_RESULTS_DIR: allure-results
 
     - name: List all files in repo after tests (debug)
       if: always()
@@ -45,16 +49,42 @@ jobs:
     - name: List screenshots in allure-results (debug)
       if: always()
       run: |
-        Get-ChildItem -Path allure-results -Filter *.png -Recurse | ForEach-Object { Write-Host $_.FullName }
-        if (-not (Get-ChildItem -Path allure-results -Filter *.png -Recurse)) { Write-Host "No screenshots found" }
+        Get-ChildItem -Path . -Filter *.png -Recurse | ForEach-Object { Write-Host $_.FullName }
+        Get-ChildItem -Path . -Filter *.jpg -Recurse | ForEach-Object { Write-Host $_.FullName }
+        if (Test-Path "allure-results") {
+          Get-ChildItem -Path allure-results -Recurse | ForEach-Object { Write-Host $_.FullName }
+        }
+        if (Test-Path "TestResults") {
+          Get-ChildItem -Path TestResults -Recurse | ForEach-Object { Write-Host $_.FullName }
+        }
+
+    - name: Copy screenshots to allure-results
+      if: always()
+      run: |
+        if (Test-Path "TestResults") {
+          Get-ChildItem -Path TestResults -Filter *.png -Recurse | ForEach-Object {
+            Copy-Item $_.FullName -Destination allure-results -Force
+            Write-Host "Copied screenshot: $($_.Name)"
+          }
+        }
+        # Also check for screenshots in bin directory
+        if (Test-Path "bin") {
+          Get-ChildItem -Path bin -Filter *.png -Recurse | ForEach-Object {
+            Copy-Item $_.FullName -Destination allure-results -Force
+            Write-Host "Copied screenshot from bin: $($_.Name)"
+          }
+        }
 
     - name: Prepare Allure history for trend
       if: always()
       run: |
         git clone --branch gh-pages --single-branch https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} gh-pages-history
-        if exist gh-pages-history\history (
-          xcopy gh-pages-history\history allure-results\history /E /I /Y
-        )
+        if (Test-Path "gh-pages-history\history") {
+          if (-not (Test-Path "allure-results\history")) {
+            New-Item -ItemType Directory -Path "allure-results\history" -Force
+          }
+          Copy-Item -Path "gh-pages-history\history\*" -Destination "allure-results\history" -Recurse -Force
+        }
 
     - name: Generate Allure Report
       if: always()
@@ -68,7 +98,7 @@ jobs:
         name: allure-report
         path: allure-report
 
-    - name: Deploy report to Github Pages (manual git)
+    - name: Deploy report to Github Pages
       if: always()
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -76,8 +106,8 @@ jobs:
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git config --global user.name "github-actions[bot]"
         git clone --branch gh-pages --single-branch https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} gh-pages
-        robocopy allure-report gh-pages /E
+        Copy-Item -Path "allure-report\*" -Destination "gh-pages" -Recurse -Force
         cd gh-pages
         git add .
-        git commit -m "Update Allure report [skip ci]" || exit 0
+        git commit -m "Update Allure report [skip ci]" -or $true
         git push

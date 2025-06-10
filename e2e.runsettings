@@ -14,6 +14,15 @@
       <DEBUG>pw:api</DEBUG>
    	</EnvironmentVariables>
   </RunConfiguration>
+   <LoggerRunSettings>
+    <Loggers>
+      <Logger friendlyName="trx" enabled="True">
+        <Configuration>
+          <LogFileName>allure-report.trx</LogFileName>
+        </Configuration>
+      </Logger>
+    </Loggers>
+  </LoggerRunSettings>
   <!-- Playwright -->  
   <Playwright>
     <BrowserName>chromium</BrowserName>
