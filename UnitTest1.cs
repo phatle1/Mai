@@ -79,44 +79,18 @@ namespace WeTransact.Publisher.AutomationTest.Production
 
         protected async Task TakeScreenshot(string name = "screenshot")
         {
-            
-            if (_page == null) return;
-
-            var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-            var testName = TestContext.CurrentContext.Test.Name;
-            var fileName = $"{testName}_{name}_{timestamp}.png";
-            // Always resolve allure-results relative to the git repo root
-
-
-            var repoRoot = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "..", ".."));
-            var resultsDir = Path.Combine(repoRoot, "allure-results");
+            var fileName = $"ExampleTest_failure_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png";
+            var resultsDir = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "allure-results");
             Directory.CreateDirectory(resultsDir);
             var screenshotPath = Path.Combine(resultsDir, fileName);
 
+            await _page.ScreenshotAsync(new PageScreenshotOptions { Path = screenshotPath, FullPage = true });
+            AllureApi.AddAttachment(fileName, "image/png", screenshotPath); // <<--- THIS IS REQUIRED
+
+            Console.WriteLine($"resultsDir: {resultsDir}");
             Console.WriteLine("Saving screenshot to: " + screenshotPath);
             Console.WriteLine("Working directory: " + Directory.GetCurrentDirectory());
             Console.WriteLine($"Screenshot exists after save: {File.Exists(screenshotPath)}");
-            
-            
-
-            // Ensure directory exists
-
-
-            // Take screenshot
-            try
-            {
-                await _page.ScreenshotAsync(new PageScreenshotOptions { Path = screenshotPath });
-                Console.WriteLine($"Screenshot exists after save: {File.Exists(screenshotPath)}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Screenshot FAILED: " + ex.ToString());
-            }
-
-            // Attach to Allure report
-            AllureApi.AddAttachment(fileName, "image/png", screenshotPath);
-            
-            TestContext.WriteLine($"Phat is here: {screenshotPath}");
         }
 
         private async Task TakeScreenshotOnFailure()
@@ -155,18 +129,13 @@ namespace WeTransact.Publisher.AutomationTest.Production
         [AllureStory("test")]
       
         public async Task ExampleTest()
-        {
-            // Navigate to page
+        {            // Navigate to page
             await _page!.GotoAsync("https://www.google.com/");
-
             // Take a screenshot for documentation
             await TakeScreenshot("page_loaded");
-
             // Your test logic here
             var title = await _page.TitleAsync();
             Assert.Fail("failed");
-
-           
         }
     }
     
