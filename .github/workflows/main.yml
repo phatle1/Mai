@@ -17,6 +17,10 @@ jobs:
           dotnet build --configuration Debug
           pwsh bin/Debug/net8.0/playwright.ps1 install --with-deps
           dotnet test --settings e2e.runsettings --logger "trx;LogFileName=allure-report.trx" --results-directory "allure-results"
+          # Print working directory and allure-results contents for CI debug
+          echo "PWD: $PWD"
+          dir
+          dir allure-results
 
       - name: List allure-results directory (debug)
         if: always()
@@ -26,6 +30,18 @@ jobs:
           Get-ChildItem -Path allure-results -Filter *.png -Recurse | ForEach-Object { Write-Host "Screenshot: $($_.FullName)" }
           Write-Host "----"
           Get-ChildItem -Path allure-results -Filter *.json -Recurse | ForEach-Object { Write-Host "Allure JSON: $($_.FullName)" }
+
+      - name: Print first Allure JSON file (debug)
+        if: always()
+        run: |
+          $json = Get-ChildItem -Path allure-results -Filter *.json -Recurse | Select-Object -First 1
+          if ($json) {
+            Write-Host "----"
+            Get-Content $json.FullName | Write-Host
+            Write-Host "----"
+          } else {
+            Write-Host "No Allure JSON files found."
+          }
 
       - name: Load test report history
         uses: actions/checkout@v4
@@ -55,3 +71,17 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
           publish_dir: allure-history
+
+      - name: Upload allure-results as artifact (debug)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results
+          path: allure-results
+
+      - name: Upload allure-history as artifact (debug)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-history
+          path: allure-history
