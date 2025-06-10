@@ -42,8 +42,8 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: allure-report
-        path: allure-report
+        name: allure-results
+        path: allure-results
 
     - name: Deploy report to Github Pages (manual git)
       if: always()

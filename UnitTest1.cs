@@ -89,8 +89,13 @@ namespace WeTransact.Publisher.AutomationTest.Production
             Directory.CreateDirectory(resultsDir);
             var screenshotPath = Path.Combine(resultsDir, fileName);
 
+            Console.WriteLine("Saving screenshot to: " + screenshotPath);
+            Console.WriteLine("Working directory: " + Directory.GetCurrentDirectory());
+            
+            
+
             // Ensure directory exists
-           
+
 
             // Take screenshot
             await _page.ScreenshotAsync(new PageScreenshotOptions
