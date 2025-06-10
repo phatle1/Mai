@@ -53,41 +53,27 @@ namespace WeTransact.Publisher.AutomationTest.Production
         [TearDown]
         public async Task TearDown()
         {
-            
+            if (TestContext.CurrentContext.Result.Outcome.Status == NUnit.Framework.Interfaces.TestStatus.Failed && _page != null)
+            {
+                var screenshotPath = "screenshot.png";
+                await _page.ScreenshotAsync(new PageScreenshotOptions { Path = screenshotPath });
+                AllureApi.AddAttachment("Screenshot on Failure", "image/png", screenshotPath);
+            }
         }
 
        
 
     }
 
-    // Example test class
     [TestFixture]
     [AllureFeature("Web UI Tests")]
     public class ExampleTests : PlaywrightTestBase
     {
         [Test]
-        [AllureStory("test")]
-      
+        [AllureStory("test")]      
         public async Task ExampleTest()
-        {            // Navigate to page
-            await _page!.GotoAsync("https://www.google.com/");
-            // Take a screenshot for documentation
-           
-            // Your test logic here
-            var title = await _page.TitleAsync();
-            var resultsDir = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "allure-results");
-            Directory.CreateDirectory(resultsDir);
-
-            var fileName = $"failure-{TestContext.CurrentContext.Test.Name}-{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png";
-            var screenshotPath = Path.Combine(resultsDir, fileName);
-
-            await _page.ScreenshotAsync(new PageScreenshotOptions { Path = screenshotPath, FullPage = true });
-
-            // ATTACH the screenshot to Allure. This is the critical line.
-            AllureApi.AddAttachment("Failure Screenshot", "image/png", screenshotPath);
-
-            // Debug log
-            Console.WriteLine($"Screenshot attached: {screenshotPath}");
+        {         
+            await _page!.GotoAsync("https://www.google.com/");           
             Assert.Fail("failed");
         }
     }
