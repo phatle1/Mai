@@ -22,6 +22,10 @@ jobs:
         if: always()
         run: |
           Get-ChildItem -Path allure-results -Recurse | ForEach-Object { Write-Host $_.FullName }
+          Write-Host "----"
+          Get-ChildItem -Path allure-results -Filter *.png -Recurse | ForEach-Object { Write-Host "Screenshot: $($_.FullName)" }
+          Write-Host "----"
+          Get-ChildItem -Path allure-results -Filter *.json -Recurse | ForEach-Object { Write-Host "Allure JSON: $($_.FullName)" }
 
       - name: Load test report history
         uses: actions/checkout@v4
