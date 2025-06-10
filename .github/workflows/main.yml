@@ -1,87 +1,60 @@
-name: Run tests and publish the report
-on: [push]
-
-permissions: write-all
-
+name: Playwright Tests
+on:
+  push:
+    branches: [ "Master" ]
+  pull_request:
+    branches: [ "Master" ]
 jobs:
   test:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 
+        
+    - name: Setup dotnet
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
 
-      - name: Install Allure CLI
-        run: npm install -g allure-commandline
+    - name: Build & Install
+      run: dotnet build --configuration Debug
 
-      - name: Run tests
-        run: |
-          dotnet build --configuration Debug
-          pwsh bin/Debug/net8.0/playwright.ps1 install --with-deps
-          dotnet test --settings e2e.runsettings --logger "trx;LogFileName=allure-report.trx" --results-directory "allure-results"
-          # Print working directory and allure-results contents for CI debug
-          echo "PWD: $PWD"
-          dir
-          dir allure-results
+    - name: Install Allure CLI
+      run: npm install -g allure-commandline --save-dev
+      
+    - name: install browsers
+      run: pwsh bin/Debug/net8.0/playwright.ps1 install --with-deps
 
-      - name: List allure-results directory (debug)
-        if: always()
-        run: |
-          Get-ChildItem -Path allure-results -Recurse | ForEach-Object { Write-Host $_.FullName }
-          Write-Host "----"
-          Get-ChildItem -Path allure-results -Filter *.png -Recurse | ForEach-Object { Write-Host "Screenshot: $($_.FullName)" }
-          Write-Host "----"
-          Get-ChildItem -Path allure-results -Filter *.json -Recurse | ForEach-Object { Write-Host "Allure JSON: $($_.FullName)" }
+    
+    - name: Run tests
+      run: |
+        mkdir allure-results
+        dotnet test --settings e2e.runsettings  --logger "trx;LogFileName=allure-report.trx" --results-directory "allure-results"
+      continue-on-error: true
 
-      - name: Print first Allure JSON file (debug)
-        if: always()
-        run: |
-          $json = Get-ChildItem -Path allure-results -Filter *.json -Recurse | Select-Object -First 1
-          if ($json) {
-            Write-Host "----"
-            Get-Content $json.FullName | Write-Host
-            Write-Host "----"
-          } else {
-            Write-Host "No Allure JSON files found."
-          }
+    - name: Generate Allure Report
+      if: always()
+      run: |
+        allure generate allure-results --clean -o allure-report
 
-      - name: Load test report history
-        uses: actions/checkout@v4
-        if: always()
-        continue-on-error: true
-        with:
-          ref: gh-pages
-          path: gh-pages
+    - name: Upload Allure Report Artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: allure-report
+        path: allure-report
 
-      - name: Copy Allure history for trend
-        if: always()
-        run: |
-          if (Test-Path 'gh-pages\history') {
-            New-Item -ItemType Directory -Path 'allure-results\history' -Force | Out-Null
-            Copy-Item -Path 'gh-pages\history\*' -Destination 'allure-results\history' -Recurse -Force
-          }
-
-      - name: Build test report
-        if: always()
-        run: |
-          allure generate allure-results --clean -o allure-history
-
-      - name: Publish test report
-        uses: peaceiris/actions-gh-pages@v4
-        if: always()
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: allure-history
-
-      - name: Upload allure-results as artifact (debug)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: allure-results
-          path: allure-results
-
-      - name: Upload allure-history as artifact (debug)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: allure-history
-          path: allure-history
+    - name: Deploy report to Github Pages (manual git)
+      if: always()
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git config --global user.name "github-actions[bot]"
+        git clone --branch gh-pages --single-branch https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} gh-pages
+        robocopy allure-report gh-pages /E
+        cd gh-pages
+        git add .
+        git commit -m "Update Allure report [skip ci]" || exit 0
+        git push
