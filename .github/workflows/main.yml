@@ -30,15 +30,21 @@ jobs:
     - name: Run tests
       run: |
         mkdir allure-results
-        dotnet test
+        dotnet test --settings e2e.runsettings  --logger "trx;LogFileName=allure-report.trx" --results-directory "allure-results"
       continue-on-error: true
 
-    - name: Upload Allure Results Artifact
+    - name: List screenshots in allure-results (debug)
       if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: allure-results
-        path: allure-results
+      run: |
+        dir allure-results\*.png /s || echo "No screenshots found"
+
+    - name: Prepare Allure history for trend
+      if: always()
+      run: |
+        git clone --branch gh-pages --single-branch https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} gh-pages-history
+        if exist gh-pages-history\history (
+          xcopy gh-pages-history\history allure-results\history /E /I /Y
+        )
 
     - name: Generate Allure Report
       if: always()
