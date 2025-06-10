@@ -33,9 +33,9 @@ jobs:
         if: always()
         run: |
           npm install -g allure-commandline
-          if exist gh-pages\history (
-            xcopy gh-pages\history allure-results\history /E /I /Y
-          )
+          if (Test-Path 'gh-pages\history') {
+            Copy-Item -Path 'gh-pages\history\*' -Destination 'allure-results\history' -Recurse -Force
+          }
           allure generate allure-results --clean -o allure-history
 
       - name: Publish test report
