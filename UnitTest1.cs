@@ -35,8 +35,8 @@ namespace WeTransact.Publisher.AutomationTest.Production
             // Configure browser options
             var browserOptions = new BrowserTypeLaunchOptions
             {
-                Headless = true, // Set to false for debugging
-                SlowMo = 50
+                Headless = false, // Set to false for debugging
+               
             };
 
             _browser = await _playwright.Chromium.LaunchAsync(browserOptions);
@@ -44,8 +44,7 @@ namespace WeTransact.Publisher.AutomationTest.Production
             // Create context with screenshot options
             _context = await _browser.NewContextAsync(new BrowserNewContextOptions
             {
-                ViewportSize = new ViewportSize { Width = 1920, Height = 1080 },
-                RecordVideoDir = "videos/", // Optional: record videos
+               
             });
 
             _page = await _context.NewPageAsync();
@@ -54,70 +53,23 @@ namespace WeTransact.Publisher.AutomationTest.Production
         [TearDown]
         public async Task TearDown()
         {
-            // Take screenshot on test failure
-            if (TestContext.CurrentContext.Result.Outcome.Status == NUnit.Framework.Interfaces.TestStatus.Failed)
+            if (TestContext.CurrentContext.Result.Outcome.Status == NUnit.Framework.Interfaces.TestStatus.Failed && _page != null)
             {
-                await TakeScreenshotOnFailure();
-            }
+                var resultsDir = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "allure-results");
+                Directory.CreateDirectory(resultsDir);
 
-            // Close browser resources
-            if (_page != null)
-            {
-                await _page.CloseAsync();
-            }
-            
-            if (_context != null)
-            {
-                await _context.CloseAsync();
-            }
-            
-            if (_browser != null)
-            {
-                await _browser.CloseAsync();
+                var fileName = $"screenshot-{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png";
+                var screenshotPath = Path.Combine(resultsDir, fileName);
+
+                await _page.ScreenshotAsync(new PageScreenshotOptions { Path = screenshotPath, FullPage = true });
+                AllureApi.AddAttachment(fileName, "image/png", screenshotPath);
+
+                Console.WriteLine($"Screenshot saved: {screenshotPath}, Exists: {File.Exists(screenshotPath)}");
             }
         }
 
-        protected async Task TakeScreenshot(string name = "screenshot")
-        {
-            var fileName = $"ExampleTest_failure_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png";
-            var resultsDir = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "allure-results");
-            Directory.CreateDirectory(resultsDir);
-            var screenshotPath = Path.Combine(resultsDir, fileName);
+       
 
-            await _page.ScreenshotAsync(new PageScreenshotOptions { Path = screenshotPath, FullPage = true });
-            AllureApi.AddAttachment(fileName, "image/png", screenshotPath); // <<--- THIS IS REQUIRED
-
-            Console.WriteLine($"resultsDir: {resultsDir}");
-            Console.WriteLine("Saving screenshot to: " + screenshotPath);
-            Console.WriteLine("Working directory: " + Directory.GetCurrentDirectory());
-            Console.WriteLine($"Screenshot exists after save: {File.Exists(screenshotPath)}");
-        }
-
-        private async Task TakeScreenshotOnFailure()
-        {
-            try
-            {
-                await TakeScreenshot("failure");
-            }
-            catch (Exception ex)
-            {
-                TestContext.WriteLine($"Failed to take screenshot: {ex.Message}");
-            }
-        }
-
-        protected void AttachTextToAllure(string name, string content)
-        {
-            AllureApi.AddAttachment(name, "text/plain", content);
-        }
-
-        // Helper method to attach file to Allure report
-        protected void AttachFileToAllure(string name, string filePath, string mimeType = "application/octet-stream")
-        {
-            if (File.Exists(filePath))
-            {
-                AllureApi.AddAttachment(name, mimeType, filePath);
-            }
-        }
     }
 
     // Example test class
@@ -132,7 +84,7 @@ namespace WeTransact.Publisher.AutomationTest.Production
         {            // Navigate to page
             await _page!.GotoAsync("https://www.google.com/");
             // Take a screenshot for documentation
-            await TakeScreenshot("page_loaded");
+           
             // Your test logic here
             var title = await _page.TitleAsync();
             Assert.Fail("failed");
