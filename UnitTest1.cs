@@ -53,19 +53,7 @@ namespace WeTransact.Publisher.AutomationTest.Production
         [TearDown]
         public async Task TearDown()
         {
-            if (TestContext.CurrentContext.Result.Outcome.Status == NUnit.Framework.Interfaces.TestStatus.Failed && _page != null)
-            {
-                var resultsDir = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "allure-results");
-                Directory.CreateDirectory(resultsDir);
-
-                var fileName = $"screenshot-{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png";
-                var screenshotPath = Path.Combine(resultsDir, fileName);
-
-                await _page.ScreenshotAsync(new PageScreenshotOptions { Path = screenshotPath, FullPage = true });
-                AllureApi.AddAttachment(fileName, "image/png", screenshotPath);
-
-                Console.WriteLine($"Screenshot saved: {screenshotPath}, Exists: {File.Exists(screenshotPath)}");
-            }
+            
         }
 
        
@@ -87,6 +75,19 @@ namespace WeTransact.Publisher.AutomationTest.Production
            
             // Your test logic here
             var title = await _page.TitleAsync();
+            var resultsDir = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "allure-results");
+            Directory.CreateDirectory(resultsDir);
+
+            var fileName = $"failure-{TestContext.CurrentContext.Test.Name}-{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png";
+            var screenshotPath = Path.Combine(resultsDir, fileName);
+
+            await _page.ScreenshotAsync(new PageScreenshotOptions { Path = screenshotPath, FullPage = true });
+
+            // ATTACH the screenshot to Allure. This is the critical line.
+            AllureApi.AddAttachment("Failure Screenshot", "image/png", screenshotPath);
+
+            // Debug log
+            Console.WriteLine($"Screenshot attached: {screenshotPath}");
             Assert.Fail("failed");
         }
     }
