@@ -79,30 +79,12 @@ namespace WeTransact.Publisher.AutomationTest.Production
 
         protected async Task TakeScreenshot(string name = "screenshot")
         {
-            if (_page == null) return;
-
-            var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-            var testName = TestContext.CurrentContext.Test.Name;
-            var fileName = $"{testName}_{name}_{timestamp}.png";
-            // Always resolve allure-results relative to the git repo root
-            var repoRoot = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, "..", "..", ".."));
-            var allureResultsRoot = Path.Combine(repoRoot, "allure-results");
-            var screenshotPath = Path.Combine(allureResultsRoot, fileName);
-
-            // Ensure directory exists
-            Directory.CreateDirectory(allureResultsRoot);
-
-            // Take screenshot
-            await _page.ScreenshotAsync(new PageScreenshotOptions
+            if (TestContext.CurrentContext.Result.Outcome.Status == NUnit.Framework.Interfaces.TestStatus.Failed)
             {
-                Path = screenshotPath,
-                FullPage = true
-            });
-
-            // Attach to Allure report
-            AllureApi.AddAttachment(fileName, "image/png", screenshotPath);
-            
-            TestContext.WriteLine($"Screenshot saved: {screenshotPath}");
+                var screenshotPath = "screenshot.png";
+                await _page.ScreenshotAsync(new PageScreenshotOptions { Path = screenshotPath });
+                AllureApi.AddAttachment("Screenshot on Failure", "image/png", screenshotPath);
+            }
         }
 
         private async Task TakeScreenshotOnFailure()
